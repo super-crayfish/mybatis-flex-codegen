@@ -14,11 +14,11 @@ import java.util.regex.Pattern;
 public class SqlParser {
 
     private static final Pattern CREATE_TABLE_PATTERN = Pattern.compile(
-            "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?[`'\"]?([\\w_]+)[`'\"]?\\s*\\((.+?)\\)\\s*(?:COMMENT\\s*=\\s*['\"](.+?)['\"])?\\s*(?:;|$)",
+            "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?[`'\"]?([\\w_]+)[`'\"]?\\s*\\((.+?)\\)(?:\\s*COMMENT\\s*=?\\s*['\"](.+?)['\"])?\\s*(?:;|$)",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
     private static final Pattern COLUMN_PATTERN = Pattern.compile(
-            "\\s*[`'\"]?([\\w_]+)[`'\"]?\\s+([\\w\\(\\)]+)(?:\\s+(?:CHARACTER SET|CHARSET)\\s+\\w+)?(?:\\s+COLLATE\\s+\\w+)?(?:\\s+UNSIGNED)?(?:\\s+ZEROFILL)?(?:\\s+NOT\\s+NULL)?(?:\\s+NULL)?(?:\\s+DEFAULT\\s+([^,]+?))?(?:\\s+AUTO_INCREMENT)?(?:\\s+COMMENT\\s+['\"](.+?)['\"])?(?:\\s+PRIMARY\\s+KEY)?(?:\\s*,|$)",
+            "\\s*[`'\"]?([\\w_]+)[`'\"]?\\s+([\\w\\(\\),']+)(?:\\s+(?:CHARACTER SET|CHARSET)\\s+\\w+)?(?:\\s+COLLATE\\s+\\w+)?(?:\\s+UNSIGNED)?(?:\\s+ZEROFILL)?(?:\\s+(?:NOT\\s+NULL|NULL))?(?:\\s+(?:DEFAULT\\s+([^,]+?)))?(?:\\s+(?:ON\\s+UPDATE\\s+[^,]+))?(?:\\s+AUTO_INCREMENT)?(?:\\s+COMMENT\\s+['\"](.+?)['\"])?(?:\\s+PRIMARY\\s+KEY)?(?:\\s*,|$)",
             Pattern.CASE_INSENSITIVE);
 
     private static final Pattern PRIMARY_KEY_PATTERN = Pattern.compile(
@@ -59,13 +59,17 @@ public class SqlParser {
         SQL_TO_JAVA_TYPE_MAP.put("BOOLEAN", "Boolean");
         SQL_TO_JAVA_TYPE_MAP.put("ENUM", "String");
         SQL_TO_JAVA_TYPE_MAP.put("SET", "String");
+        SQL_TO_JAVA_TYPE_MAP.put("TINYINT(1)", "Boolean");
         SQL_TO_JAVA_TYPE_MAP.put("JSON", "String");
     }
 
     public static List<TableInfo> parseSql(String sqlScript) {
         List<TableInfo> tables = new ArrayList<>();
         
-        Matcher createTableMatcher = CREATE_TABLE_PATTERN.matcher(sqlScript);
+        // Remove SQL comments to avoid interference with parsing
+        String cleanedSql = removeComments(sqlScript);
+        
+        Matcher createTableMatcher = CREATE_TABLE_PATTERN.matcher(cleanedSql);
         while (createTableMatcher.find()) {
             String tableName = createTableMatcher.group(1);
             String columnsDefinition = createTableMatcher.group(2);
@@ -81,6 +85,16 @@ public class SqlParser {
             String primaryKeyColumn = null;
             if (primaryKeyMatcher.find()) {
                 primaryKeyColumn = primaryKeyMatcher.group(1);
+            }
+            
+            // If no explicit PRIMARY KEY clause, look for PRIMARY KEY in column definition
+            if (primaryKeyColumn == null && columnsDefinition.toLowerCase().contains("primary key")) {
+                Pattern inlineKeyPattern = Pattern.compile("\\s*[`'\"]?([\\w_]+)[`'\"]?\\s+[\\w\\(\\)]+.*?\\bPRIMARY\\s+KEY\\b", 
+                    Pattern.CASE_INSENSITIVE);
+                Matcher inlineKeyMatcher = inlineKeyPattern.matcher(columnsDefinition);
+                if (inlineKeyMatcher.find()) {
+                    primaryKeyColumn = inlineKeyMatcher.group(1);
+                }
             }
             
             // Parse columns
@@ -134,6 +148,27 @@ public class SqlParser {
         return tables;
     }
     
+    /**
+     * Removes SQL comments from the input SQL script
+     * @param sql SQL script with comments
+     * @return SQL script without comments
+     */
+    private static String removeComments(String sql) {
+        // Remove single-line comments (-- comment)
+        String noSingleLineComments = sql.replaceAll("--.*?\\n", " ");
+        
+        // Remove multi-line comments (/* comment */)
+        String noComments = noSingleLineComments.replaceAll("/\\*[\\s\\S]*?\\*/", " ");
+        
+        return noComments;
+    }
+    
+    /**
+     * Converts a snake_case string to camelCase or PascalCase
+     * @param input Input string in snake_case
+     * @param capitalizeFirstLetter If true, converts to PascalCase, otherwise to camelCase
+     * @return Converted string
+     */
     public static String toCamelCase(String input, boolean capitalizeFirstLetter) {
         if (StringUtils.isBlank(input)) {
             return input;
