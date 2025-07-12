@@ -34,9 +34,106 @@ public class CodeGenerator {
         if (tableInfo.isGenerateController()) {
             String controllerCode = generateControllerClass(tableInfo);
             generatedFiles.put("Controller.java", controllerCode);
+            
+            // Generate R class for response wrapper
+            String rCode = generateRClass(tableInfo);
+            generatedFiles.put("R.java", rCode);
         }
         
         return generatedFiles;
+    }
+    
+    private static String generateRClass(TableInfo tableInfo) {
+        StringBuilder sb = new StringBuilder();
+        
+        // Package declaration
+        sb.append("package ").append(tableInfo.getPackageName()).append(".common;\n\n");
+        
+        // Imports
+        sb.append("import lombok.Data;\n");
+        sb.append("import lombok.NoArgsConstructor;\n");
+        sb.append("import lombok.AllArgsConstructor;\n\n");
+        
+        // Class comment
+        sb.append("/**\n");
+        sb.append(" * Generic response wrapper for API responses\n");
+        sb.append(" * @param <T> Type of data returned\n");
+        sb.append(" */\n");
+        
+        // Class declaration
+        sb.append("@Data\n");
+        sb.append("@NoArgsConstructor\n");
+        sb.append("@AllArgsConstructor\n");
+        sb.append("public class R<T> {\n\n");
+        
+        // Constants
+        sb.append("    private static final int SUCCESS_CODE = 200;\n");
+        sb.append("    private static final int ERROR_CODE = 500;\n");
+        sb.append("    private static final String SUCCESS_MESSAGE = \"Success\";\n");
+        sb.append("    private static final String ERROR_MESSAGE = \"Error\";\n\n");
+        
+        // Fields
+        sb.append("    /**\n");
+        sb.append("     * Response code\n");
+        sb.append("     */\n");
+        sb.append("    private int code;\n\n");
+        
+        sb.append("    /**\n");
+        sb.append("     * Response message\n");
+        sb.append("     */\n");
+        sb.append("    private String message;\n\n");
+        
+        sb.append("    /**\n");
+        sb.append("     * Response data\n");
+        sb.append("     */\n");
+        sb.append("    private T data;\n\n");
+        
+        // Static methods
+        sb.append("    /**\n");
+        sb.append("     * Create a success response with data\n");
+        sb.append("     * @param data Response data\n");
+        sb.append("     * @param <T> Type of data\n");
+        sb.append("     * @return Success response with data\n");
+        sb.append("     */\n");
+        sb.append("    public static <T> R<T> success(T data) {\n");
+        sb.append("        return new R<>(SUCCESS_CODE, SUCCESS_MESSAGE, data);\n");
+        sb.append("    }\n\n");
+        
+        sb.append("    /**\n");
+        sb.append("     * Create a success response with custom message and data\n");
+        sb.append("     * @param message Custom message\n");
+        sb.append("     * @param data Response data\n");
+        sb.append("     * @param <T> Type of data\n");
+        sb.append("     * @return Success response with custom message and data\n");
+        sb.append("     */\n");
+        sb.append("    public static <T> R<T> success(String message, T data) {\n");
+        sb.append("        return new R<>(SUCCESS_CODE, message, data);\n");
+        sb.append("    }\n\n");
+        
+        sb.append("    /**\n");
+        sb.append("     * Create an error response with message\n");
+        sb.append("     * @param message Error message\n");
+        sb.append("     * @param <T> Type of data\n");
+        sb.append("     * @return Error response with message\n");
+        sb.append("     */\n");
+        sb.append("    public static <T> R<T> error(String message) {\n");
+        sb.append("        return new R<>(ERROR_CODE, message, null);\n");
+        sb.append("    }\n\n");
+        
+        sb.append("    /**\n");
+        sb.append("     * Create an error response with custom code and message\n");
+        sb.append("     * @param code Error code\n");
+        sb.append("     * @param message Error message\n");
+        sb.append("     * @param <T> Type of data\n");
+        sb.append("     * @return Error response with custom code and message\n");
+        sb.append("     */\n");
+        sb.append("    public static <T> R<T> error(int code, String message) {\n");
+        sb.append("        return new R<>(code, message, null);\n");
+        sb.append("    }\n");
+        
+        sb.append("}\n");
+        
+        return sb.toString();
     }
     
     private static String generateEntityClass(TableInfo tableInfo) {

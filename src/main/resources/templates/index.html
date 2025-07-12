@@ -309,6 +309,7 @@
                         const zip = new JSZip();
                         const packageName = document.getElementById('packageName').value;
                         const moduleName = document.getElementById('moduleName').value;
+                        let commonFolderProcessed = false;
                         
                         // Add README file
                         const readmeContent = `# MyBatis-Flex Generated Code
@@ -344,6 +345,7 @@ Generated on: ${new Date().toLocaleString()}
                             const serviceFolder = zip.folder(`src/main/java/${packageName.replace(/\\./g, '/')}/${moduleName}/service`);
                             const serviceImplFolder = zip.folder(`src/main/java/${packageName.replace(/\\./g, '/')}/${moduleName}/service/impl`);
                             const controllerFolder = zip.folder(`src/main/java/${packageName.replace(/\\./g, '/')}/${moduleName}/controller`);
+                            const commonFolder = zip.folder(`src/main/java/${packageName.replace(/\\./g, '/')}/common`);
                             
                             // Add files to the appropriate folders
                             Object.entries(table.generatedFiles).forEach(([fileName, code]) => {
@@ -357,8 +359,18 @@ Generated on: ${new Date().toLocaleString()}
                                     serviceImplFolder.file(`${table.className}ServiceImpl.java`, code);
                                 } else if (fileName === 'Controller.java') {
                                     controllerFolder.file(`${table.className}Controller.java`, code);
+                                } else if (fileName === 'R.java') {
+                                    // Only add R.java once per package
+                                    if (!commonFolderProcessed) {
+                                        commonFolder.file('R.java', code);
+                                    }
                                 }
                             });
+                            
+                            // Mark common folder as processed to avoid duplicate R.java files
+                            if (index === 0) {
+                                commonFolderProcessed = true;
+                            }
                         });
                         
                         return zip.generateAsync({ type: 'blob' });
