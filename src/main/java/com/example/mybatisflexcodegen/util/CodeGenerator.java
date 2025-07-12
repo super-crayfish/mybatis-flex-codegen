@@ -208,6 +208,7 @@ public class CodeGenerator {
         // Imports
         sb.append("import ").append(tableInfo.getPackageName()).append(".").append(tableInfo.getModuleName()).append(".entity.").append(tableInfo.getClassName()).append(";\n");
         sb.append("import ").append(tableInfo.getPackageName()).append(".").append(tableInfo.getModuleName()).append(".service.").append(tableInfo.getClassName()).append("Service;\n");
+        sb.append("import ").append(tableInfo.getPackageName()).append(".common.R;\n");
         sb.append("import org.springframework.beans.factory.annotation.Autowired;\n");
         sb.append("import org.springframework.web.bind.annotation.*;\n\n");
         sb.append("import java.util.List;\n\n");
@@ -230,32 +231,48 @@ public class CodeGenerator {
         
         // List all
         sb.append("    @GetMapping(\"/list\")\n");
-        sb.append("    public List<").append(tableInfo.getClassName()).append("> list() {\n");
-        sb.append("        return ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.list();\n");
+        sb.append("    public R<List<").append(tableInfo.getClassName()).append(">> list() {\n");
+        sb.append("        return R.success(").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.list());\n");
         sb.append("    }\n\n");
         
         // Get by id
         sb.append("    @GetMapping(\"/{id}\")\n");
-        sb.append("    public ").append(tableInfo.getClassName()).append(" getById(@PathVariable Long id) {\n");
-        sb.append("        return ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.getById(id);\n");
+        sb.append("    public R<").append(tableInfo.getClassName()).append("> getById(@PathVariable Long id) {\n");
+        sb.append("        var entity = ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.getById(id);\n");
+        sb.append("        return entity != null ? R.success(entity) : R.error(\"Record not found\");\n");
         sb.append("    }\n\n");
         
         // Create
         sb.append("    @PostMapping\n");
-        sb.append("    public boolean save(@RequestBody ").append(tableInfo.getClassName()).append(" ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append(") {\n");
-        sb.append("        return ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.save(").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append(");\n");
+        sb.append("    public R<Boolean> save(@RequestBody ").append(tableInfo.getClassName()).append(" ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append(") {\n");
+        sb.append("        try {\n");
+        sb.append("            var result = ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.save(").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append(");\n");
+        sb.append("            return R.success(result);\n");
+        sb.append("        } catch (Exception e) {\n");
+        sb.append("            return R.error(\"Failed to save: \" + e.getMessage());\n");
+        sb.append("        }\n");
         sb.append("    }\n\n");
         
         // Update
         sb.append("    @PutMapping\n");
-        sb.append("    public boolean update(@RequestBody ").append(tableInfo.getClassName()).append(" ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append(") {\n");
-        sb.append("        return ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.updateById(").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append(");\n");
+        sb.append("    public R<Boolean> update(@RequestBody ").append(tableInfo.getClassName()).append(" ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append(") {\n");
+        sb.append("        try {\n");
+        sb.append("            var result = ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.updateById(").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append(");\n");
+        sb.append("            return R.success(result);\n");
+        sb.append("        } catch (Exception e) {\n");
+        sb.append("            return R.error(\"Failed to update: \" + e.getMessage());\n");
+        sb.append("        }\n");
         sb.append("    }\n\n");
         
         // Delete
         sb.append("    @DeleteMapping(\"/{id}\")\n");
-        sb.append("    public boolean delete(@PathVariable Long id) {\n");
-        sb.append("        return ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.removeById(id);\n");
+        sb.append("    public R<Boolean> delete(@PathVariable Long id) {\n");
+        sb.append("        try {\n");
+        sb.append("            var result = ").append(SqlParser.toCamelCase(tableInfo.getClassName(), false)).append("Service.removeById(id);\n");
+        sb.append("            return R.success(result);\n");
+        sb.append("        } catch (Exception e) {\n");
+        sb.append("            return R.error(\"Failed to delete: \" + e.getMessage());\n");
+        sb.append("        }\n");
         sb.append("    }\n");
         
         sb.append("}");

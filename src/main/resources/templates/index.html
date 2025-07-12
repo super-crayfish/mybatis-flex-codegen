@@ -157,12 +157,17 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    // Check if the response is successful
+                    if (data.code !== 200) {
+                        throw new Error(data.message || 'Failed to generate code');
+                    }
+                    
                     // Clear previous results
                     tablesTabList.innerHTML = '';
                     tablesTabContent.innerHTML = '';
                     
                     // Create tabs for each table
-                    data.tables.forEach((table, index) => {
+                    data.data.tables.forEach((table, index) => {
                         // Create tab
                         const tabId = `table-${index}`;
                         const tabItem = document.createElement('li');
