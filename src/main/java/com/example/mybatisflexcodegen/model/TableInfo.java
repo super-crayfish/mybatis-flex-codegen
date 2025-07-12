@@ -16,6 +16,8 @@ public class TableInfo {
     private String packageName;
     private String moduleName;
     private boolean useLombok = true;
+    private boolean useValidation = true;
+    private boolean useSwagger = true;
     private boolean generateMapper = true;
     private boolean generateService = true;
     private boolean generateController = true;

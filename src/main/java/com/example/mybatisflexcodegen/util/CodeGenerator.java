@@ -43,6 +43,57 @@ public class CodeGenerator {
         return generatedFiles;
     }
     
+    /**
+     * Generates example values for Swagger documentation based on column type
+     * @param column Column information
+     * @return Example value as string
+     */
+    private static String generateExample(ColumnInfo column) {
+        String javaType = column.getJavaType();
+        String fieldName = column.getFieldName().toLowerCase();
+        
+        // Generate examples based on field name and type
+        if ("String".equals(javaType)) {
+            if (fieldName.contains("email")) {
+                return "example@example.com";
+            } else if (fieldName.contains("phone") || fieldName.contains("mobile")) {
+                return "13800138000";
+            } else if (fieldName.contains("name")) {
+                return "Example Name";
+            } else if (fieldName.contains("address")) {
+                return "123 Example Street";
+            } else if (fieldName.contains("url") || fieldName.contains("website")) {
+                return "https://example.com";
+            } else if (fieldName.contains("password")) {
+                return "********";
+            } else {
+                return "example";
+            }
+        } else if ("Integer".equals(javaType) || "Long".equals(javaType)) {
+            if (fieldName.contains("age")) {
+                return "25";
+            } else if (fieldName.contains("year")) {
+                return "2023";
+            } else if (fieldName.contains("count")) {
+                return "10";
+            } else {
+                return "1";
+            }
+        } else if ("Double".equals(javaType) || "Float".equals(javaType) || javaType.contains("BigDecimal")) {
+            if (fieldName.contains("price") || fieldName.contains("amount")) {
+                return "99.99";
+            } else {
+                return "1.0";
+            }
+        } else if ("Boolean".equals(javaType)) {
+            return "true";
+        } else if (javaType.contains("Date")) {
+            return "2023-01-01";
+        } else {
+            return "";
+        }
+    }
+    
     private static String generateRClass(TableInfo tableInfo) {
         StringBuilder sb = new StringBuilder();
         
@@ -164,6 +215,23 @@ public class CodeGenerator {
         // Add Lombok annotations if requested
         if (tableInfo.isUseLombok()) {
             sb.append("import lombok.Data;\n");
+            sb.append("import lombok.NoArgsConstructor;\n");
+            sb.append("import lombok.AllArgsConstructor;\n");
+        }
+        
+        // Add Validation annotations if requested
+        if (tableInfo.isUseValidation()) {
+            sb.append("import javax.validation.constraints.NotNull;\n");
+            sb.append("import javax.validation.constraints.Size;\n");
+            sb.append("import javax.validation.constraints.Email;\n");
+            sb.append("import javax.validation.constraints.Min;\n");
+            sb.append("import javax.validation.constraints.Max;\n");
+        }
+        
+        // Add Swagger annotations if requested
+        if (tableInfo.isUseSwagger()) {
+            sb.append("import io.swagger.annotations.ApiModel;\n");
+            sb.append("import io.swagger.annotations.ApiModelProperty;\n");
         }
         
         sb.append("\n");
@@ -178,7 +246,17 @@ public class CodeGenerator {
         // Class declaration with annotations
         if (tableInfo.isUseLombok()) {
             sb.append("@Data\n");
+            sb.append("@NoArgsConstructor\n");
+            sb.append("@AllArgsConstructor\n");
         }
+        
+        // Add Swagger ApiModel annotation if requested
+        if (tableInfo.isUseSwagger()) {
+            sb.append("@ApiModel(value = \"").append(tableInfo.getClassName()).append("\", description = \"")
+              .append(StringUtils.isNotBlank(tableInfo.getComment()) ? tableInfo.getComment() : tableInfo.getClassName())
+              .append("\")\n");
+        }
+        
         sb.append("@Table(\"").append(tableInfo.getTableName()).append("\")\n");
         sb.append("public class ").append(tableInfo.getClassName()).append(" {\n\n");
         
@@ -194,6 +272,43 @@ public class CodeGenerator {
             // Field annotations
             if (column.isPrimaryKey()) {
                 sb.append("    @Id(keyType = KeyType.AUTO)\n");
+            }
+            
+            // Add Swagger ApiModelProperty annotation if requested
+            if (tableInfo.isUseSwagger()) {
+                sb.append("    @ApiModelProperty(value = \"")
+                  .append(StringUtils.isNotBlank(column.getComment()) ? column.getComment() : column.getFieldName())
+                  .append("\"");
+                
+                if (!column.isNullable()) {
+                    sb.append(", required = true");
+                }
+                
+                if (column.getLength() != null) {
+                    sb.append(", example = \"").append(generateExample(column)).append("\"");
+                }
+                
+                sb.append(")\n");
+            }
+            
+            // Add Validation annotations if requested
+            if (tableInfo.isUseValidation()) {
+                // Add NotNull annotation for non-nullable fields
+                if (!column.isNullable() && !column.isPrimaryKey()) {
+                    sb.append("    @NotNull\n");
+                }
+                
+                // Add Size annotation for String fields with length
+                if ("String".equals(column.getJavaType()) && column.getLength() != null) {
+                    sb.append("    @Size(max = ").append(column.getLength()).append(")\n");
+                }
+                
+                // Add Email annotation for email fields
+                if ("String".equals(column.getJavaType()) && 
+                    (column.getFieldName().toLowerCase().contains("email") || 
+                     (column.getComment() != null && column.getComment().toLowerCase().contains("email")))) {
+                    sb.append("    @Email\n");
+                }
             }
             
             // Field declaration

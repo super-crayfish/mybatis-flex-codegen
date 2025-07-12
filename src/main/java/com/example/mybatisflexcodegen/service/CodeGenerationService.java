@@ -22,6 +22,8 @@ public class CodeGenerationService {
             table.setPackageName(request.getPackageName());
             table.setModuleName(request.getModuleName());
             table.setUseLombok(request.isUseLombok());
+            table.setUseValidation(request.isUseValidation());
+            table.setUseSwagger(request.isUseSwagger());
             table.setGenerateMapper(request.isGenerateMapper());
             table.setGenerateService(request.isGenerateService());
             table.setGenerateController(request.isGenerateController());

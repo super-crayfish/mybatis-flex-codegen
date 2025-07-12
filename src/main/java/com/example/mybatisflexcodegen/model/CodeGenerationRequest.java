@@ -8,6 +8,8 @@ public class CodeGenerationRequest {
     private String packageName = "com.example";
     private String moduleName = "system";
     private boolean useLombok = true;
+    private boolean useValidation = true;
+    private boolean useSwagger = true;
     private boolean generateMapper = true;
     private boolean generateService = true;
     private boolean generateController = true;

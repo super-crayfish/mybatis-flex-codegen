@@ -87,31 +87,30 @@
                             </div>
                             
                             <div class="row">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="useLombok" checked>
                                         <label class="form-check-label" for="useLombok">Use Lombok</label>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="generateMapper" checked>
-                                        <label class="form-check-label" for="generateMapper">Generate Mapper</label>
+                                        <input class="form-check-input" type="checkbox" id="useValidation" checked>
+                                        <label class="form-check-label" for="useValidation">Use Validation</label>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="generateService" checked>
-                                        <label class="form-check-label" for="generateService">Generate Service</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="generateController" checked>
-                                        <label class="form-check-label" for="generateController">Generate Controller</label>
+                                        <input class="form-check-input" type="checkbox" id="useSwagger" checked>
+                                        <label class="form-check-label" for="useSwagger">Use Swagger</label>
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Hidden fields for backward compatibility -->
+                            <input type="hidden" id="generateMapper" value="true">
+                            <input type="hidden" id="generateService" value="true">
+                            <input type="hidden" id="generateController" value="true">
                             
                             <button type="submit" class="btn btn-primary">Generate Code</button>
                         </form>
@@ -160,9 +159,11 @@
                     packageName: document.getElementById('packageName').value,
                     moduleName: document.getElementById('moduleName').value,
                     useLombok: document.getElementById('useLombok').checked,
-                    generateMapper: document.getElementById('generateMapper').checked,
-                    generateService: document.getElementById('generateService').checked,
-                    generateController: document.getElementById('generateController').checked
+                    useValidation: document.getElementById('useValidation').checked,
+                    useSwagger: document.getElementById('useSwagger').checked,
+                    generateMapper: document.getElementById('generateMapper').value === 'true',
+                    generateService: document.getElementById('generateService').value === 'true',
+                    generateController: document.getElementById('generateController').value === 'true'
                 };
                 
                 fetch('/api/codegen/generate', {
