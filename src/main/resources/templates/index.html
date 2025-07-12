@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyBatis-Flex Code Generator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" rel="stylesheet">
     <style>
         body {
@@ -35,8 +36,12 @@
             margin: 0;
             padding: 10px;
         }
-        .copy-btn {
+        .copy-btn, .download-btn {
             cursor: pointer;
+        }
+        .btn-group {
+            display: flex;
+            gap: 5px;
         }
         .nav-tabs {
             margin-bottom: 15px;
@@ -116,7 +121,12 @@
         </div>
         
         <div id="resultContainer" class="d-none">
-            <h3 class="mb-3">Generated Code</h3>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="mb-0">Generated Code</h3>
+                <button id="downloadAllBtn" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-zip"></i> Download All Files
+                </button>
+            </div>
             
             <div id="tablesTabs">
                 <ul class="nav nav-tabs" id="tablesTabList" role="tablist"></ul>
@@ -128,6 +138,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const codegenForm = document.getElementById('codegenForm');
@@ -193,6 +205,13 @@
                         tabContent.setAttribute('role', 'tabpanel');
                         tabContent.setAttribute('aria-labelledby', `${tabId}-tab`);
                         
+                        // Add download table button
+                        const downloadTableBtn = document.createElement('button');
+                        downloadTableBtn.className = 'btn btn-outline-primary mb-3 download-table-btn';
+                        downloadTableBtn.innerHTML = '<i class="bi bi-file-earmark-zip"></i> Download All Files for ' + table.className;
+                        downloadTableBtn.setAttribute('data-table-index', index);
+                        tabContent.appendChild(downloadTableBtn);
+                        
                         // Add code blocks for each generated file
                         Object.entries(table.generatedFiles).forEach(([fileName, code]) => {
                             const codeContainer = document.createElement('div');
@@ -202,10 +221,17 @@
                             codeHeader.className = 'code-header';
                             codeHeader.innerHTML = `
                                 <span>${table.className}${fileName}</span>
-                                <button class="btn btn-sm btn-outline-secondary copy-btn" 
-                                        data-code="${encodeURIComponent(code)}">
-                                    Copy
-                                </button>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-secondary copy-btn" 
+                                            data-code="${encodeURIComponent(code)}">
+                                        <i class="bi bi-clipboard"></i> Copy
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary download-btn" 
+                                            data-code="${encodeURIComponent(code)}"
+                                            data-filename="${table.className}${fileName}">
+                                        <i class="bi bi-download"></i> Download
+                                    </button>
+                                </div>
                             `;
                             
                             const codeContent = document.createElement('div');
@@ -233,12 +259,104 @@
                         button.addEventListener('click', function() {
                             const code = decodeURIComponent(this.getAttribute('data-code'));
                             navigator.clipboard.writeText(code).then(() => {
-                                const originalText = this.textContent;
-                                this.textContent = 'Copied!';
+                                const originalText = this.innerHTML;
+                                this.innerHTML = '<i class="bi bi-check"></i> Copied!';
                                 setTimeout(() => {
-                                    this.textContent = originalText;
+                                    this.innerHTML = originalText;
                                 }, 2000);
                             });
+                        });
+                    });
+                    
+                    // Add download functionality
+                    document.querySelectorAll('.download-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const code = decodeURIComponent(this.getAttribute('data-code'));
+                            const filename = this.getAttribute('data-filename');
+                            
+                            // Create a blob with the code content
+                            const blob = new Blob([code], { type: 'text/plain' });
+                            
+                            // Create a temporary link element
+                            const link = document.createElement('a');
+                            link.href = URL.createObjectURL(blob);
+                            link.download = filename;
+                            
+                            // Append to the document, click it, and remove it
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            
+                            // Clean up the URL object
+                            URL.revokeObjectURL(link.href);
+                            
+                            // Show feedback
+                            const originalText = this.innerHTML;
+                            this.innerHTML = '<i class="bi bi-check"></i> Downloaded!';
+                            setTimeout(() => {
+                                this.innerHTML = originalText;
+                            }, 2000);
+                        });
+                    });
+                    
+                    // Function to create a zip file for a specific table or all tables
+                    function createZipFile(tableIndices) {
+                        const zip = new JSZip();
+                        
+                        // If tableIndices is null, include all tables
+                        const indicesToInclude = tableIndices || [...Array(data.data.tables.length).keys()];
+                        
+                        // Store generated files
+                        indicesToInclude.forEach(index => {
+                            const table = data.data.tables[index];
+                            
+                            // Create a folder for each table
+                            const folder = zip.folder(table.className);
+                            
+                            // Add files to the folder
+                            Object.entries(table.generatedFiles).forEach(([fileName, code]) => {
+                                folder.file(fileName, code);
+                            });
+                        });
+                        
+                        return zip.generateAsync({ type: 'blob' });
+                    }
+                    
+                    // Add download all functionality
+                    document.getElementById('downloadAllBtn').addEventListener('click', function() {
+                        createZipFile(null)
+                            .then(function(content) {
+                                // Save the zip file
+                                saveAs(content, 'mybatis-flex-generated-code.zip');
+                                
+                                // Show feedback
+                                const btn = document.getElementById('downloadAllBtn');
+                                const originalText = btn.innerHTML;
+                                btn.innerHTML = '<i class="bi bi-check"></i> Downloaded!';
+                                setTimeout(() => {
+                                    btn.innerHTML = originalText;
+                                }, 2000);
+                            });
+                    });
+                    
+                    // Add download table functionality
+                    document.querySelectorAll('.download-table-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const tableIndex = parseInt(this.getAttribute('data-table-index'));
+                            const table = data.data.tables[tableIndex];
+                            
+                            createZipFile([tableIndex])
+                                .then(function(content) {
+                                    // Save the zip file
+                                    saveAs(content, `${table.className}-generated-code.zip`);
+                                    
+                                    // Show feedback
+                                    const originalText = button.innerHTML;
+                                    button.innerHTML = '<i class="bi bi-check"></i> Downloaded!';
+                                    setTimeout(() => {
+                                        button.innerHTML = originalText;
+                                    }, 2000);
+                                });
                         });
                     });
                 })
